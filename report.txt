@@ -1,0 +1,9 @@
+Network Health Report
+
+google.com : UP
+github.com : UP
+yahoo.com : UP
+
+Summary:
+UP: 3
+DOWN: 0

@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Site Monitor</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 24px; max-width: 900px; margin: auto; }
+      .bar { height: 18px; background:#eee; border-radius: 4px; overflow: hidden; margin:6px 0 12px; }
+      .bar > i { display:block; height:100%; background: linear-gradient(90deg,#4caf50,#2196f3); }
+      .label { font-weight:600; }
+      .metric { margin-bottom:10px; }
+      .box { border:1px solid #ddd; padding:12px; border-radius:6px; background:#fafafa; }
+      form { margin-bottom:18px; }
+    </style>
+  </head>
+  <body>
+    <h2>Website Monitor</h2>
+    <form method="post" action="/">
+      <input name="site" placeholder="example.com" style="width:70%; padding:8px" required />
+      <button type="submit" style="padding:8px 12px">Run Check</button>
+    </form>
+
+    {% if message %}
+      <p>{{ message }}</p>
+    {% endif %}
+
+    {% if report %}
+      {% set w_avg = (bars['Avg_Response_Time_ms']|default(0))|int %}
+      {% set w_pkt = (bars['Packet_Loss_%']|default(0))|int %}
+      {% set w_dns = (bars['DNS_Time_ms']|default(0))|int %}
+      {% set w_load = (bars['Load_Time_ms']|default(0))|int %}
+      {% set w_ssl = (bars['SSL_Days_Left']|default(0))|int %}
+
+      <h3>Latest results for {{ report['Website'] }}</h3>
+      <div class="box">
+        <p><strong>Timestamp:</strong> {{ report['Timestamp'] }}</p>
+        <p><strong>Final Status:</strong> {{ report['Final_Status'] }} &nbsp; <strong>Alert:</strong> {{ report['Alert'] }}</p>
+
+        <div class="metric"><div class="label">Avg Response (ms):</div>
+          <div class="bar"><i data-width="{{ w_avg }}"></i></div>
+          <div>{{ report['Avg_Response_Time_ms'] }} ms</div>
+        </div>
+
+        <div class="metric"><div class="label">Packet Loss (%):</div>
+          <div class="bar"><i data-width="{{ w_pkt }}"></i></div>
+          <div>{{ report['Packet_Loss_%'] }} %</div>
+        </div>
+
+        <div class="metric"><div class="label">DNS Time (ms):</div>
+          <div class="bar"><i data-width="{{ w_dns }}"></i></div>
+          <div>{{ report['DNS_Time_ms'] }} ms</div>
+        </div>
+
+        <div class="metric"><div class="label">Load Time (ms):</div>
+          <div class="bar"><i data-width="{{ w_load }}"></i></div>
+          <div>{{ report['Load_Time_ms'] }} ms</div>
+        </div>
+
+        <div class="metric"><div class="label">SSL Days Left:</div>
+          <div class="bar"><i data-width="{{ w_ssl }}"></i></div>
+          <div>{{ report['SSL_Days_Left'] }} days</div>
+        </div>
+
+        <p><strong>HTTP Status:</strong> {{ report['HTTP_Status'] }} ({{ report['HTTP_Status_Code'] }})</p>
+        <p><strong>Ping Status:</strong> {{ report['Ping_Status'] }} &nbsp; <strong>Hop Count:</strong> {{ report['Hop_Count'] }}</p>
+      </div>
+    {% endif %}
+    <script>
+      // Set bar widths from data attributes (avoids putting template tokens inside CSS)
+      (function(){
+        document.querySelectorAll('.bar > i').forEach(function(el){
+          var w = el.getAttribute('data-width') || '0';
+          // ensure numeric
+          var n = parseInt(w,10);
+          if (isNaN(n)) n = 0;
+          el.style.width = n + '%';
+        });
+      })();
+    </script>
+  </body>
+</html>
