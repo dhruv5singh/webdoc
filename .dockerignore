@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+venv
+env
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+build
+dist
+.pytest_cache
+node_modules
+local_settings.py
+*.log
+report.csv
+site.csv

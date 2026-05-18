@@ -8,6 +8,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 8501
+# Allow the PORT env var to be set by the runtime (Render uses $PORT)
+ENV PORT=8501
 
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]    
+EXPOSE ${PORT}
+
+# Use shell form so environment variables like $PORT are expanded
+CMD streamlit run app.py --server.port $PORT --server.address 0.0.0.0
