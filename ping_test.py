@@ -9,6 +9,7 @@ from datetime import datetime
 import os
 import socket
 import ssl
+from urllib.parse import urlparse
 
 
 # Simple network monitor that writes to report.csv
@@ -52,7 +53,6 @@ def run_monitor(target_site=None, fast_mode=False):
                 "Ping_Status",
                 "Avg_Response_Time_ms",
                 "Packet_Loss_%",
-                "Hop_Count",
                 "DNS_Time_ms",
                 "HTTP_Status",
                 "HTTP_Status_Code",
@@ -64,7 +64,30 @@ def run_monitor(target_site=None, fast_mode=False):
             ])
 
         for row in sites:
-            site = row.get("site")
+            site_raw = row.get("site")
+            if not site_raw:
+                continue
+            # normalize input: accept full URLs (with http/https and paths) or bare hostnames
+            s = site_raw.strip()
+            # If user provided a full URL (includes scheme), parse it
+            if s.startswith('http://') or s.startswith('https://'):
+                parsed = urlparse(s)
+                hostname = parsed.hostname
+                path = parsed.path or ''
+                if parsed.query:
+                    path += '?' + parsed.query
+                http_urls = [s.rstrip('/')]
+            else:
+                # could be 'example.com' or 'example.com/path'
+                parsed = urlparse('//' + s)
+                hostname = parsed.hostname or s
+                path = parsed.path or ''
+                if parsed.query:
+                    path += '?' + parsed.query
+                # try HTTPS first, then HTTP
+                http_urls = [f'https://{hostname}{path}', f'http://{hostname}{path}']
+
+            site = hostname
             timestamp = datetime.now()
 
             # DNS
@@ -79,35 +102,39 @@ def run_monitor(target_site=None, fast_mode=False):
 
             # PING
             ping_count = 1 if fast_mode else 3
-            ping_wait = 500 if fast_mode else 1000
+            ping_wait = 1 if fast_mode else 2
+
             try:
-                result = subprocess.run(["ping", "-n", str(ping_count), "-w", str(ping_wait), site], capture_output=True, text=True)
+                result = subprocess.run(
+                    ["ping", "-c", str(ping_count), "-W", str(ping_wait), site],
+                    capture_output=True,
+                    text=True
+                )
+
                 output = result.stdout
+
                 ping_status = "UP" if result.returncode == 0 else "DOWN"
+
             except Exception:
                 output = ""
                 ping_status = "DOWN"
 
-            time_match = re.findall(r"time[=<](\d+)", output)
-            avg_time = (sum(map(int, time_match)) / len(time_match)) if time_match else 0
-            loss_match = re.search(r"Lost = (\d+)", output)
-            sent_match = re.search(r"Sent = (\d+)", output)
-            if loss_match and sent_match:
-                lost = int(loss_match.group(1))
-                sent = int(sent_match.group(1))
-                packet_loss = (lost / sent) * 100
-            else:
-                packet_loss = 0
+            # RESPONSE TIME
+            time_match = re.findall(r"time=(\d+\.?\d*)", output)
 
-            # TRACEROUTE (skip in fast mode)
-            hop_count = 0
-            if not fast_mode:
-                try:
-                    tracert = subprocess.run(["tracert", "-h", "15", site], capture_output=True, text=True)
-                    hop_lines = re.findall(r"^\s*\d+\s+", tracert.stdout, re.MULTILINE)
-                    hop_count = len(hop_lines)
-                except Exception:
-                    hop_count = 0
+            avg_time = (
+                sum(map(float, time_match)) / len(time_match)
+            ) if time_match else 0
+
+            # PACKET LOSS
+            loss_match = re.search(r"(\d+)% packet loss", output)
+
+            if loss_match:
+                packet_loss = float(loss_match.group(1))
+            else:
+                packet_loss = 100 if ping_status == "DOWN" else 0
+
+
 
             # HTTP - use a session, follow redirects, record history; try HTTPS then HTTP
             status_code = 0
@@ -122,10 +149,11 @@ def run_monitor(target_site=None, fast_mode=False):
             session = requests.Session()
             session.headers.update(headers)
             http_timeout = 3 if fast_mode else 10
-            for scheme in ("https://", "http://"):
+            # Try the candidate HTTP URLs (either the provided URL or https/http variants)
+            for url_try in http_urls:
                 try:
                     start = time.time()
-                    resp = session.get(scheme + site, timeout=http_timeout, allow_redirects=True)
+                    resp = session.get(url_try, timeout=http_timeout, allow_redirects=True)
                     end = time.time()
                     load_time = (end - start) * 1000
                     status_code = resp.status_code
@@ -143,7 +171,7 @@ def run_monitor(target_site=None, fast_mode=False):
                         http_status = "WARNING"
                     break
                 except Exception as e:
-                    print(f"HTTP request for {scheme+site} failed: {e}")
+                    print(f"HTTP request for {url_try} failed: {e}")
                     continue
 
             # SSL
@@ -193,7 +221,6 @@ def run_monitor(target_site=None, fast_mode=False):
                 ping_status,
                 round(avg_time, 2),
                 round(packet_loss, 2),
-                hop_count,
                 round(dns_time, 2),
                 http_status,
                 status_code,

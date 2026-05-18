@@ -1,4 +1,4 @@
-Timestamp,Website,Ping_Status,Avg_Response_Time_ms,Packet_Loss_%,Hop_Count,DNS_Time_ms,HTTP_Status,HTTP_Status_Code,Load_Time_ms,SSL_Days_Left,Final_Status,Category,Alert
+Timestamp,Website,Ping_Status,Avg_Response_Time_ms,Packet_Loss_%,DNS_Time_ms,HTTP_Status,HTTP_Status_Code,Load_Time_ms,SSL_Days_Left,Final_Status,Category,Alert
 2026-05-08 12:21:40.572832,google.com,UP,40.33,0.0,9,39.93,UP,200,1421.12,66,UP,Fast,NORMAL
 2026-05-08 12:22:06.352786,github.com,UP,64.0,0.0,15,36.17,UP,200,890.74,86,UP,Fast,NORMAL
 2026-05-08 12:24:09.738551,yahoo.com,UP,295.67,0.0,15,11.99,UP,200,2906.16,110,UP,Slow,NORMAL
@@ -42,3 +42,6 @@ Timestamp,Website,Ping_Status,Avg_Response_Time_ms,Packet_Loss_%,Hop_Count,DNS_T
 2026-05-12 14:40:05.626664,flipkart.com,UP,187.0,0.0,0,529.89,DOWN,0,0,-1,NETWORK ISSUE,Moderate,NORMAL
 2026-05-12 14:40:44.481108,github.com,UP,68.0,0.0,0,225.23,UP,200,963.44,82,UP,Fast,NORMAL
 2026-05-12 14:41:17.930741,muscleblaze.com,UP,28.0,0.0,0,178.73,UP,200,1659.78,84,UP,Fast,NORMAL
+2026-05-12 15:41:23.329157,github.com,UP,58.0,0.0,0,56.86,UP,200,1591.92,82,UP,Fast,NORMAL
+2026-05-12 15:41:34.282248,github.com,UP,67.0,0.0,0,10.28,UP,200,2463.05,82,UP,Fast,NORMAL
+2026-05-12 15:41:45.800924,flipkart.com,UP,192.0,0.0,0,40.02,DOWN,0,0,-1,NETWORK ISSUE,Moderate,NORMAL
