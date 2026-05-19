@@ -2,11 +2,19 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, main ]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # Opt into Node.js 24 for JavaScript actions to avoid deprecation issues
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
