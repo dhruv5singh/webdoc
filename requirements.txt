@@ -3,3 +3,4 @@ gunicorn
 requests
 streamlit
 pandas
+flask-cors

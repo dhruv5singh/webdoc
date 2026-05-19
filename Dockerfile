@@ -8,10 +8,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Allow the PORT env var to be set by the runtime (Render uses $PORT)
-ENV PORT=8501
+# Allow selection of service mode: 'api' (gunicorn) or 'ui' (streamlit)
+ENV SERVICE=api
 
-EXPOSE ${PORT}
+# Expose both ports. API runs on 5000 by default; Streamlit uses 8501
+EXPOSE 5000 8501
 
-# Use shell form so environment variables like $PORT are expanded
-CMD streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+# Entrypoint: choose service based on SERVICE env var
+CMD if [ "$SERVICE" = "ui" ]; then \
+			streamlit run app.py --server.port ${PORT:-8501} --server.address 0.0.0.0; \
+		else \
+			exec gunicorn --bind 0.0.0.0:${PORT:-5000} api:app; \
+		fi

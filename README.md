@@ -31,6 +31,19 @@ ngrok (temporary demo)
 2. Install ngrok and run `ngrok http 8501` (or 5000 for Flask)
 3. Share the public HTTPS URL ngrok provides
 
+GitHub Pages (static read-only dashboard)
+1. This repository now contains a read-only static dashboard under `docs/` that reads `report.csv` from the repo and displays it.
+2. To enable GitHub Pages for this repo:
+	- In your repository on GitHub go to Settings → Pages
+	- Select Source: Branch `master` and folder `/docs`
+	- Save — GitHub will publish the site at `https://<your-username>.github.io/<repo>` (may take a minute)
+3. Note: This static UI is read-only. To make live checks (add rows to `report.csv`) you still need a backend service (Render, Fly, etc.) that writes to the repository or exposes an API the static UI can call.
+
+Backend API contract (optional integration)
+- The static UI supports sending a POST request with JSON { "site": "example.com" } to a backend endpoint.
+- Expected request: POST /api/run with JSON body { "site": "example.com" }
+- Expected response: 200 OK (body optional). The UI will wait ~3s and then refresh `report.csv`.
+- Security: protect this endpoint (token or basic auth) to prevent misuse.
 Security notes
 - Do not embed GitHub PATs or other secrets in client code. Use server-side secrets.
 - The Streamlit dev server is not production-grade. For production, consider running behind a proper web server.

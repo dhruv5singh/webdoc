@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Network Monitoring — Static Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Network Monitoring — Static Dashboard</h1>
+      <p>This is a read-only dashboard that reads <code>report.csv</code> from this repository.</p>
+    </header>
+
+    <main>
+      <div id="controls">
+        <label for="filter-site">Filter by website:</label>
+        <input id="filter-site" placeholder="example: google.com or admin.heal247.in" />
+        <button id="refresh">Refresh</button>
+        <label for="backend-url" style="margin-left:12px">Backend URL (optional):</label>
+        <input id="backend-url" placeholder="https://your-backend.example/api/run" style="width:360px" />
+        <button id="save-backend">Save</button>
+        <button id="run-check">Run check</button>
+        <span id="run-status" style="margin-left:12px;color:#9aa6b2"></span>
+      </div>
+
+      <section id="summary"></section>
+
+      <section id="table-wrap">
+        <table id="report-table">
+          <thead id="thead"></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <footer>
+      <p>To enable live checks (write/update CSV) you must run a backend (e.g., Render) and configure the static UI to post to it. See README for details.</p>
+    </footer>
+
+    <script>
+      // Raw URL to report.csv in this repository (public). Update owner/repo/branch if needed.
+      const REPORT_CSV_URL = 'https://raw.githubusercontent.com/dhruv5singh/webdoc/master/report.csv';
+
+      function humanRow(r){
+        // return a simple representation
+        return `Website: ${r.Website} | HTTP: ${r.HTTP_Status} | Ping: ${r.Ping_Status} | Alert: ${r.Alert}`;
+      }
+
+      function renderTable(data){
+        const thead = document.getElementById('thead');
+        const tbody = document.getElementById('tbody');
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+        if(!data || data.length===0){
+          thead.innerHTML = '<tr><th>No data</th></tr>';
+          return;
+        }
+        // columns from first row
+        const cols = Object.keys(data[0]);
+        const tr = document.createElement('tr');
+        cols.forEach(c=>{ const th=document.createElement('th'); th.textContent=c; tr.appendChild(th)});
+        thead.appendChild(tr);
+        data.forEach(row=>{
+          const tr = document.createElement('tr');
+          cols.forEach(c=>{
+            const td = document.createElement('td');
+            td.textContent = row[c];
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+      }
+
+      function renderSummary(data){
+        const summary = document.getElementById('summary');
+        summary.innerHTML = '';
+        if(!data || data.length===0) return;
+        const latest = data[data.length-1];
+        const p = document.createElement('p');
+        p.textContent = humanRow(latest);
+        summary.appendChild(p);
+      }
+
+      function loadCsvAndRender(){
+        Papa.parse(REPORT_CSV_URL, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: function(results){
+            const raw = results.data;
+            const filter = document.getElementById('filter-site').value.trim().toLowerCase();
+            const filtered = filter ? raw.filter(r=> (r.Website||'').toLowerCase().includes(filter)) : raw;
+            renderTable(filtered);
+            renderSummary(filtered);
+          },
+          error: function(err){
+            document.getElementById('thead').innerHTML = '<tr><th>Error loading CSV</th></tr>';
+            console.error(err);
+          }
+        });
+      }
+
+      document.getElementById('refresh').addEventListener('click', loadCsvAndRender);
+      document.getElementById('filter-site').addEventListener('keyup', function(e){ if(e.key==='Enter') loadCsvAndRender(); });
+
+      // Backend integration: persist backend endpoint in localStorage and allow POSTing a run request
+      const backendInput = document.getElementById('backend-url');
+      const saveBtn = document.getElementById('save-backend');
+      const runBtn = document.getElementById('run-check');
+      const runStatus = document.getElementById('run-status');
+
+      const STORAGE_KEY = 'monitor_backend_url';
+      function loadBackendUrl(){
+        const val = localStorage.getItem(STORAGE_KEY) || '';
+        backendInput.value = val;
+        return val;
+      }
+      function saveBackendUrl(v){ localStorage.setItem(STORAGE_KEY, v); backendInput.value = v; }
+
+      saveBtn.addEventListener('click', function(){ saveBackendUrl(backendInput.value.trim()); runStatus.textContent = 'Saved'; setTimeout(()=>runStatus.textContent='','2000'); });
+
+      runBtn.addEventListener('click', async function(){
+        const backend = backendInput.value.trim() || loadBackendUrl();
+        if(!backend){ runStatus.textContent = 'Set backend URL first'; return; }
+        const site = (document.getElementById('filter-site').value || '').trim();
+        if(!site){ runStatus.textContent = 'Enter a website to run'; return; }
+        runStatus.textContent = 'Sending...';
+        try{
+          const res = await fetch(backend, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ site })
+          });
+          if(!res.ok){
+            const t = await res.text();
+            runStatus.textContent = 'Error: ' + res.status + ' ' + t;
+            return;
+          }
+          runStatus.textContent = 'Requested. Refreshing in 3s...';
+          setTimeout(()=>{ loadCsvAndRender(); runStatus.textContent='Done'; }, 3000);
+        }catch(err){
+          runStatus.textContent = 'Request failed: ' + err.message;
+        }
+      });
+
+      // prefill backend input from localStorage
+      loadBackendUrl();
+
+      // initial load
+      loadCsvAndRender();
+    </script>
+  </body>
+</html>

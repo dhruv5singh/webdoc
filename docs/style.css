@@ -1,0 +1,11 @@
+:root{--bg:#0f1720;--card:#0b1220;--text:#e6eef6;--muted:#9aa6b2}
+body{font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;margin:0;background:var(--bg);color:var(--text)}
+header{padding:24px;background:linear-gradient(90deg,#0b1220,#0e1620);}
+header h1{margin:0;font-size:20px}
+main{padding:20px}
+#controls{display:flex;gap:8px;margin-bottom:16px}
+input{padding:8px;border-radius:6px;border:1px solid #223}
+button{padding:8px 12px;background:#2563eb;color:white;border:none;border-radius:6px}
+#report-table{width:100%;border-collapse:collapse;background:var(--card);overflow:auto;color:var(--text)}
+#report-table th,#report-table td{padding:8px;border-bottom:1px solid #182233;text-align:left}
+footer{padding:12px;color:var(--muted);font-size:13px}
