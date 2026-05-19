@@ -19,11 +19,14 @@
         <label for="filter-site">Filter by website:</label>
         <input id="filter-site" placeholder="example: google.com or admin.heal247.in" />
         <button id="refresh">Refresh</button>
-        <label for="backend-url" style="margin-left:12px">Backend URL (optional):</label>
-        <input id="backend-url" placeholder="https://your-backend.example/api/run" style="width:360px" />
-        <button id="save-backend">Save</button>
-        <button id="run-check">Run check</button>
-        <span id="run-status" style="margin-left:12px;color:#9aa6b2"></span>
+  <label for="backend-url" style="margin-left:12px">Backend URL (optional):</label>
+  <input id="backend-url" placeholder="https://your-backend.example/api/run" style="width:300px" />
+  <button id="save-backend">Save</button>
+  <label for="api-token" style="margin-left:12px">API Token:</label>
+  <input id="api-token" placeholder="(optional) token" style="width:180px" />
+  <button id="save-token">Save Token</button>
+  <button id="run-check">Run check</button>
+  <span id="run-status" style="margin-left:12px;color:#9aa6b2"></span>
       </div>
 
       <section id="summary"></section>
@@ -112,7 +115,8 @@
       const runBtn = document.getElementById('run-check');
       const runStatus = document.getElementById('run-status');
 
-      const STORAGE_KEY = 'monitor_backend_url';
+  const STORAGE_KEY = 'monitor_backend_url';
+  const TOKEN_KEY = 'monitor_api_token';
       function loadBackendUrl(){
         const val = localStorage.getItem(STORAGE_KEY) || '';
         backendInput.value = val;
@@ -120,7 +124,14 @@
       }
       function saveBackendUrl(v){ localStorage.setItem(STORAGE_KEY, v); backendInput.value = v; }
 
-      saveBtn.addEventListener('click', function(){ saveBackendUrl(backendInput.value.trim()); runStatus.textContent = 'Saved'; setTimeout(()=>runStatus.textContent='','2000'); });
+  saveBtn.addEventListener('click', function(){ saveBackendUrl(backendInput.value.trim()); runStatus.textContent = 'Saved'; setTimeout(()=>runStatus.textContent='','2000'); });
+
+  // token saving
+  const tokenInput = document.getElementById('api-token');
+  const saveTokenBtn = document.getElementById('save-token');
+  function loadToken(){ const v = localStorage.getItem(TOKEN_KEY) || ''; tokenInput.value = v; return v; }
+  function saveToken(v){ localStorage.setItem(TOKEN_KEY, v); tokenInput.value = v; }
+  saveTokenBtn.addEventListener('click', function(){ saveToken(tokenInput.value.trim()); runStatus.textContent='Token saved'; setTimeout(()=>runStatus.textContent='','2000'); });
 
       runBtn.addEventListener('click', async function(){
         const backend = backendInput.value.trim() || loadBackendUrl();
@@ -129,9 +140,12 @@
         if(!site){ runStatus.textContent = 'Enter a website to run'; return; }
         runStatus.textContent = 'Sending...';
         try{
+          const headers = {'Content-Type':'application/json'};
+          const token = localStorage.getItem(TOKEN_KEY) || '';
+          if(token) headers['X-API-Key'] = token;
           const res = await fetch(backend, {
             method: 'POST',
-            headers: {'Content-Type':'application/json'},
+            headers,
             body: JSON.stringify({ site })
           });
           if(!res.ok){
