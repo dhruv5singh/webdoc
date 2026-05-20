@@ -73,49 +73,43 @@ def monitor_website(site_raw, fast_mode=True):
         ip_address = "DNS FAILED"
         dns_time = 0
 
-    # ---------------- PING ----------------
 
-    ping_count = 1 if fast_mode else 3
-    ping_wait = 1 if fast_mode else 2
+    # ---------------- HTTP REACHABILITY & LATENCY ----------------
+    reachability_status = "DOWN"
+    avg_time = 0
+    packet_loss = 100
+    status_code = 0
+    http_status = "DOWN"
+    load_time = 0
+    diagnosis = ""
+    headers = {"User-Agent": "Mozilla/5.0"}
+    http_timeout = 3 if fast_mode else 10
+    response = None
+    for url_try in http_urls:
+        try:
+            start = time.time()
+            response = requests.get(url_try, headers=headers, timeout=http_timeout, allow_redirects=True)
+            end = time.time()
+            avg_time = (end - start) * 1000
+            status_code = response.status_code
+            if 200 <= status_code < 400:
+                reachability_status = "UP"
+                http_status = "UP"
+                packet_loss = 0
+                diagnosis = "Application reachable and healthy."
+            else:
+                reachability_status = "UP"
+                http_status = "WARNING"
+                packet_loss = 0
+                diagnosis = "Website reachable but HTTP status is not OK."
+            website_display = response.url
+            break
+        except Exception as e:
+            diagnosis = f"HTTP request failed: {e}"
+            continue
 
-    try:
-
-        result = subprocess.run(
-            ["ping", "-c", str(ping_count), "-W", str(ping_wait), site],
-            capture_output=True,
-            text=True
-        )
-
-        output = result.stdout
-
-        ping_status = "UP" if result.returncode == 0 else "DOWN"
-
-    except Exception:
-        output = ""
-        ping_status = "DOWN"
-
-    # RESPONSE TIME
-
-    time_match = re.findall(
-        r"time=(\d+\.?\d*)",
-        output
-    )
-
-    avg_time = (
-        sum(map(float, time_match)) / len(time_match)
-    ) if time_match else 0
-
-    # PACKET LOSS
-
-    loss_match = re.search(
-        r"(\d+)% packet loss",
-        output
-    )
-
-    if loss_match:
-        packet_loss = float(loss_match.group(1))
-    else:
-        packet_loss = 100 if ping_status == "DOWN" else 0
+    if reachability_status == "DOWN":
+        diagnosis = "Website unreachable via HTTP."
 
     # ---------------- HTTP CHECK ----------------
 
@@ -175,42 +169,41 @@ def monitor_website(site_raw, fast_mode=True):
 
         ssl_days_left = -1
 
+
     # ---------------- FINAL STATUS ----------------
-
-    if http_status == "UP":
+    if ip_address == "DNS FAILED":
+        final_status = "DNS ISSUE"
+        diagnosis = "DNS resolution failed."
+    elif http_status == "UP":
         final_status = "UP"
-
-    elif ping_status == "UP":
-        final_status = "NETWORK ISSUE"
-
+        if avg_time > 300:
+            diagnosis = "Website reachable but high latency detected."
+    elif reachability_status == "DOWN":
+        final_status = "DOWN"
+        diagnosis = "Website unreachable via HTTP."
     else:
         final_status = "DOWN"
 
-    # ---------------- CATEGORY ----------------
 
+    # ---------------- CATEGORY ----------------
     if avg_time < 100:
         category = "Fast"
-
     elif avg_time < 250:
         category = "Moderate"
-
     else:
         category = "Slow"
 
-    # ---------------- ALERT ----------------
 
+    # ---------------- ALERT ----------------
     if final_status == "DOWN":
         alert = "CRITICAL"
-
-    elif packet_loss > 30:
+    elif final_status == "DNS ISSUE":
         alert = "CRITICAL"
-
-    elif avg_time > 300:
+    elif avg_time > 300 and final_status == "UP":
         alert = "WARNING"
-
     elif ssl_days_left != -1 and ssl_days_left < 7:
         alert = "SSL EXPIRING"
-
+        diagnosis = "SSL certificate nearing expiry."
     else:
         alert = "NORMAL"
 
@@ -220,7 +213,7 @@ def monitor_website(site_raw, fast_mode=True):
         "Timestamp": timestamp,
         "Website": website_display,
         "IP Address": ip_address,
-        "Ping Status": ping_status,
+        "Reachability Status": reachability_status,
         "HTTP Status": http_status,
         "Final Status": final_status,
         "Avg Response Time (ms)": round(avg_time, 2),
@@ -229,7 +222,8 @@ def monitor_website(site_raw, fast_mode=True):
         "DNS Time (ms)": round(dns_time, 2),
         "SSL Days Left": ssl_days_left,
         "Category": category,
-        "Alert": alert
+        "Alert": alert,
+        "Diagnosis": diagnosis
     }
 
 
@@ -249,23 +243,20 @@ if st.button("Monitor Website"):
 
         st.success("Monitoring Complete")
 
+
         col1, col2, col3, col4 = st.columns(4)
-
         col1.metric(
-            "Ping",
-            data["Ping Status"]
+            "Reachability",
+            data["Reachability Status"]
         )
-
         col2.metric(
             "HTTP",
             data["HTTP Status"]
         )
-
         col3.metric(
-            "Response",
+            "Response Time",
             f'{data["Avg Response Time (ms)"]} ms'
         )
-
         col4.metric(
             "Alert",
             data["Alert"]
@@ -273,12 +264,10 @@ if st.button("Monitor Website"):
 
         # ---------------- TABLE ----------------
 
-        st.subheader("Detailed Report")
 
-        st.dataframe(
-            df,
-            use_container_width=True
-        )
+        st.subheader("Detailed Report")
+        st.dataframe(df, use_container_width=True)
+        st.markdown(f"**Diagnosis:** {data['Diagnosis']}")
 
     else:
 

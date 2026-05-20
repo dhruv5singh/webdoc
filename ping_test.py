@@ -43,14 +43,14 @@ def run_monitor(target_site=None, fast_mode=False):
     file_exists = os.path.isfile("report.csv")
     sites = load_sites(target_site)
 
+
     with open("report.csv", "a", newline="", encoding="utf-8") as report:
         writer = csv.writer(report)
-
         if not file_exists:
             writer.writerow([
                 "Timestamp",
                 "Website",
-                "Ping_Status",
+                "Reachability_Status",
                 "Avg_Response_Time_ms",
                 "Packet_Loss_%",
                 "DNS_Time_ms",
@@ -61,6 +61,7 @@ def run_monitor(target_site=None, fast_mode=False):
                 "Final_Status",
                 "Category",
                 "Alert",
+                "Diagnosis",
             ])
 
         for row in sites:
@@ -100,39 +101,49 @@ def run_monitor(target_site=None, fast_mode=False):
                 ip_address = "DNS FAILED"
                 dns_time = 0
 
-            # PING
-            ping_count = 1 if fast_mode else 3
-            ping_wait = 1 if fast_mode else 2
 
-            try:
-                result = subprocess.run(
-                    ["ping", "-c", str(ping_count), "-W", str(ping_wait), site],
-                    capture_output=True,
-                    text=True
-                )
-
-                output = result.stdout
-
-                ping_status = "UP" if result.returncode == 0 else "DOWN"
-
-            except Exception:
-                output = ""
-                ping_status = "DOWN"
-
-            # RESPONSE TIME
-            time_match = re.findall(r"time=(\d+\.?\d*)", output)
-
-            avg_time = (
-                sum(map(float, time_match)) / len(time_match)
-            ) if time_match else 0
-
-            # PACKET LOSS
-            loss_match = re.search(r"(\d+)% packet loss", output)
-
-            if loss_match:
-                packet_loss = float(loss_match.group(1))
-            else:
-                packet_loss = 100 if ping_status == "DOWN" else 0
+            # HTTP-based reachability
+            reachability_status = "DOWN"
+            avg_time = 0
+            packet_loss = 100
+            status_code = 0
+            http_status = "DOWN"
+            load_time = 0
+            final_url = ""
+            diagnosis = ""
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+            session = requests.Session()
+            session.headers.update(headers)
+            http_timeout = 3 if fast_mode else 10
+            for url_try in http_urls:
+                try:
+                    start = time.time()
+                    resp = session.get(url_try, timeout=http_timeout, allow_redirects=True)
+                    end = time.time()
+                    load_time = (end - start) * 1000
+                    avg_time = load_time
+                    status_code = resp.status_code
+                    final_url = resp.url
+                    if 200 <= status_code < 400:
+                        reachability_status = "UP"
+                        http_status = "UP"
+                        packet_loss = 0
+                        diagnosis = "Application reachable and healthy."
+                    else:
+                        reachability_status = "UP"
+                        http_status = "WARNING"
+                        packet_loss = 0
+                        diagnosis = "Website reachable but HTTP status is not OK."
+                    break
+                except Exception as e:
+                    diagnosis = f"HTTP request failed: {e}"
+                    continue
+            if reachability_status == "DOWN":
+                diagnosis = "Website unreachable via HTTP."
 
 
 
@@ -187,11 +198,18 @@ def run_monitor(target_site=None, fast_mode=False):
             except Exception:
                 ssl_days_left = -1
 
+
             # FINAL STATUS
-            if http_status == "UP":
+            if ip_address == "DNS FAILED":
+                final_status = "DNS ISSUE"
+                diagnosis = "DNS resolution failed."
+            elif http_status == "UP":
                 final_status = "UP"
-            elif ping_status == "UP":
-                final_status = "NETWORK ISSUE"
+                if avg_time > 300:
+                    diagnosis = "Website reachable but high latency detected."
+            elif reachability_status == "DOWN":
+                final_status = "DOWN"
+                diagnosis = "Website unreachable via HTTP."
             else:
                 final_status = "DOWN"
 
@@ -206,19 +224,20 @@ def run_monitor(target_site=None, fast_mode=False):
             # ALERT
             if final_status == "DOWN":
                 alert = "CRITICAL"
-            elif packet_loss > 30:
+            elif final_status == "DNS ISSUE":
                 alert = "CRITICAL"
-            elif avg_time > 300:
+            elif avg_time > 300 and final_status == "UP":
                 alert = "WARNING"
             elif ssl_days_left != -1 and ssl_days_left < 7:
                 alert = "SSL EXPIRING"
+                diagnosis = "SSL certificate nearing expiry."
             else:
                 alert = "NORMAL"
 
             writer.writerow([
                 timestamp,
                 site,
-                ping_status,
+                reachability_status,
                 round(avg_time, 2),
                 round(packet_loss, 2),
                 round(dns_time, 2),
@@ -229,6 +248,7 @@ def run_monitor(target_site=None, fast_mode=False):
                 final_status,
                 category,
                 alert,
+                diagnosis,
             ])
 
 
