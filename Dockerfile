@@ -16,7 +16,7 @@ EXPOSE 5000 8501
 
 # Entrypoint: choose service based on SERVICE env var
 CMD if [ "$SERVICE" = "ui" ]; then \
-			streamlit run app.py --server.port ${PORT:-8501} --server.address 0.0.0.0; \
+			streamlit run app.py --server.port ${PORT} --server.address 0.0.0.0; \
 		else \
 			exec gunicorn --bind 0.0.0.0:${PORT:-5000} api:app; \
 		fi
