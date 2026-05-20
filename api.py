@@ -5,6 +5,7 @@ import subprocess
 import sys
 import shlex
 import logging
+import csv
 
 # Setup logging so we can see debug output in Render logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -32,6 +33,27 @@ def authorized(req):
 @app.route('/health')
 def health():
     return 'ok'
+
+
+@app.route('/api/report', methods=['GET'])
+def get_report():
+    """Return report.csv as JSON array of objects."""
+    report_file = 'report.csv'
+    if not os.path.isfile(report_file):
+        logger.warning("report.csv not found")
+        return jsonify([])
+    
+    try:
+        rows = []
+        with open(report_file, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                rows.append(row)
+        logger.info(f"Returning {len(rows)} rows from report.csv")
+        return jsonify(rows)
+    except Exception as e:
+        logger.error(f"Error reading report.csv: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/run', methods=['POST'])
