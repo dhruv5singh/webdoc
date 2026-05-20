@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import subprocess
+ 
 import requests
 import socket
 import ssl
@@ -119,31 +119,42 @@ def monitor_website(site_raw, fast_mode=True):
 
     # ---------------- HTTP CHECK ----------------
 
-    # ---------------- HTTP CHECK ----------------
-    load_time = 0
+    # ---------------- HTTP REACHABILITY & LATENCY ----------------
+    reachability_status = "DOWN"
+    avg_time = 0
+    packet_loss = 100
     status_code = 0
     http_status = "DOWN"
+    load_time = 0
+    diagnosis = ""
     headers = {"User-Agent": "Mozilla/5.0"}
     http_timeout = 3 if fast_mode else 10
+    response = None
     for url_try in http_urls:
         try:
             start = time.time()
             response = requests.get(url_try, headers=headers, timeout=http_timeout, allow_redirects=True)
             end = time.time()
-            load_time = (end - start) * 1000
+            avg_time = (end - start) * 1000
             status_code = response.status_code
-            if response.history:
-                # you can log response.history if needed
-                pass
             if 200 <= status_code < 400:
+                reachability_status = "UP"
                 http_status = "UP"
+                packet_loss = 0
+                diagnosis = "Application reachable and healthy."
             else:
+                reachability_status = "UP"
                 http_status = "WARNING"
-            # prefer the first successful URL
+                packet_loss = 0
+                diagnosis = "Website reachable but HTTP status is not OK."
             website_display = response.url
             break
-        except Exception:
+        except Exception as e:
+            diagnosis = f"HTTP request failed: {e}"
             continue
+
+    if reachability_status == "DOWN":
+        diagnosis = "Website unreachable via HTTP."
 
     # ---------------- SSL CHECK ----------------
 
