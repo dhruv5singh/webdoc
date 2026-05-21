@@ -9,47 +9,254 @@
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   </head>
   <body>
+    <!-- Premium Header -->
     <header>
-      <h1>Network Monitoring — Static Dashboard</h1>
-      <p>This is a read-only dashboard that reads <code>report.csv</code> from this repository.</p>
+      <div class="header-left">
+        <div class="sphere-wrapper">
+          <svg class="rotating-sphere" width="46" height="46" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(59, 130, 246, 0.2)" stroke-width="1.2" />
+            <circle cx="50" cy="50" r="35" fill="none" stroke="rgba(59, 130, 246, 0.15)" stroke-width="0.8" />
+            <!-- Coordinates -->
+            <ellipse cx="50" cy="50" rx="45" ry="15" fill="none" stroke="rgba(59, 130, 246, 0.4)" stroke-width="1.2" />
+            <ellipse cx="50" cy="50" rx="15" ry="45" fill="none" stroke="rgba(59, 130, 246, 0.4)" stroke-width="1.2" />
+            <ellipse cx="50" cy="50" rx="45" ry="30" fill="none" stroke="rgba(59, 130, 246, 0.25)" stroke-width="0.8" />
+            <ellipse cx="50" cy="50" rx="30" ry="45" fill="none" stroke="rgba(59, 130, 246, 0.25)" stroke-width="0.8" />
+            <!-- Nodes -->
+            <circle cx="50" cy="5" r="3.5" fill="#60a5fa" />
+            <circle cx="50" cy="95" r="3.5" fill="#60a5fa" />
+            <circle cx="5" cy="50" r="3.5" fill="#60a5fa" />
+            <circle cx="95" cy="50" r="3.5" fill="#60a5fa" />
+            <circle cx="18" cy="18" r="3" fill="#93c5fd" />
+            <circle cx="82" cy="18" r="3" fill="#93c5fd" />
+            <circle cx="50" cy="50" r="4.5" fill="#3b82f6" />
+            <!-- Connectors -->
+            <line x1="50" y1="5" x2="18" y2="18" stroke="rgba(96, 165, 250, 0.35)" stroke-width="0.8" />
+            <line x1="50" y1="5" x2="82" y2="18" stroke="rgba(96, 165, 250, 0.35)" stroke-width="0.8" />
+            <line x1="5" y1="50" x2="18" y2="18" stroke="rgba(96, 165, 250, 0.35)" stroke-width="0.8" />
+            <line x1="95" y1="50" x2="82" y2="18" stroke="rgba(96, 165, 250, 0.35)" stroke-width="0.8" />
+          </svg>
+        </div>
+        <div>
+          <h1>Live Network Monitoring</h1>
+          <p>This is a read-only static dashboard parsed from <code>report.csv</code> in this repository.</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="avatar-wrapper">
+          <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Felix&backgroundColor=b6e3f4" alt="User Avatar" />
+        </div>
+        <div class="settings-gear">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+          </svg>
+        </div>
+      </div>
     </header>
 
+    <!-- Main Container -->
     <main>
-      <div id="controls">
-        <label for="filter-site">Filter by website:</label>
-        <input id="filter-site" placeholder="example: google.com or admin.heal247.in" />
-        <button id="refresh">Refresh</button>
-  <label for="backend-url" style="margin-left:12px">Backend URL (optional):</label>
-  <input id="backend-url" placeholder="https://your-backend.example/api/run" style="width:300px" />
-  <button id="save-backend">Save</button>
-  <label for="api-token" style="margin-left:12px">API Token:</label>
-  <input id="api-token" placeholder="(optional) token" style="width:180px" />
-  <button id="save-token">Save Token</button>
-  <button id="run-check">Run check</button>
-  <span id="run-status" style="margin-left:12px;color:#9aa6b2"></span>
+      
+      <!-- Cohesive "Website to monitor" Card Form -->
+      <section class="form-card">
+        <h2 class="form-title">Website to monitor</h2>
+        <div class="form-row">
+          <div class="form-group-site">
+            <input id="filter-site" placeholder="example: google.com or https://google.com" />
+          </div>
+          <div class="form-group-toggle">
+            <span style="color: var(--muted); font-size: 13px; font-weight:600;">Fast Mode</span>
+            <label class="toggle-container">
+              <input type="checkbox" id="fast-mode" checked />
+              <div class="toggle-switch"></div>
+            </label>
+          </div>
+          <div class="form-group-button">
+            <button id="run-check">Monitor Now</button>
+          </div>
+        </div>
+
+        <!-- Collapsible Configuration Section for Backend integration -->
+        <details style="margin-top: 14px; cursor: pointer; color: var(--muted); font-size:12px;">
+          <summary style="font-family: var(--font-title); font-weight:700; outline: none; margin-bottom: 8px;">Advanced Backend Credentials</summary>
+          <div class="config-panel">
+            <div class="config-group">
+              <label for="backend-url">Backend URL</label>
+              <input id="backend-url" placeholder="https://your-backend.example/api/run" />
+            </div>
+            <div class="config-group">
+              <label for="api-token">API Token</label>
+              <input id="api-token" type="password" placeholder="(optional) token key" />
+            </div>
+            <div class="config-group" style="flex: 0.5; justify-content: flex-end;">
+              <button id="save-credentials" style="padding: 10px 14px; font-size: 11px;">Save API Settings</button>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <!-- Active Info Alert Box -->
+      <div class="alert-box" id="info-alert" style="display:none;">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span id="run-status">Scan completed. Results are current.</span>
       </div>
 
-      <section id="summary"></section>
+      <!-- Live metrics grid populated dynamically -->
+      <section class="metric-grid" id="live-metrics"></section>
 
-      <section id="table-wrap">
-        <table id="report-table">
-          <thead id="thead"></thead>
-          <tbody id="tbody"></tbody>
-        </table>
+      <!-- Diagnosis Alert panel -->
+      <div class="diagnosis-box" id="diagnosis-panel" style="display:none;"></div>
+
+      <!-- Detailed Report Section -->
+      <section class="report-section">
+        <div class="report-header">
+          <h3>Detailed Report</h3>
+          <div class="table-controls">
+            <button id="refresh" style="padding: 8px 14px; font-size: 11px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); box-shadow: none;">Refresh</button>
+          </div>
+        </div>
+        <div id="table-wrap">
+          <table id="report-table">
+            <thead id="thead"></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
       </section>
+
     </main>
 
+    <!-- Footer -->
     <footer>
-      <p>To enable live checks (write/update CSV) you must run a backend (e.g., Render) and configure the static UI to post to it. See README for details.</p>
+      <p>To enable live checks (write/update CSV) you must run a backend (e.g. Render) and configure the static credentials. See the repository documentation for details.</p>
     </footer>
 
     <script>
-      // Raw URL to report.csv in this repository (public). Update owner/repo/branch if needed.
+      // Raw URL to report.csv in this repository (public)
       const REPORT_CSV_URL = 'https://raw.githubusercontent.com/dhruv5singh/webdoc/master/report.csv';
 
-      function humanRow(r){
-        // return a simple representation
-        return `Website: ${r.Website} | HTTP: ${r.HTTP_Status} | Ping: ${r.Ping_Status} | Alert: ${r.Alert}`;
+      // SVG Badge Templates
+      const successBadge = `<svg width="16" height="16" fill="none" stroke="var(--success)" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"></path><circle cx="12" cy="12" r="10" stroke="var(--success)" stroke-width="2"></circle></svg>`;
+      const dangerBadge = `<svg width="16" height="16" fill="none" stroke="var(--danger)" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+      const warnBadge = `<svg width="16" height="16" fill="none" stroke="var(--warning)" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01"></path><circle cx="12" cy="12" r="10" stroke="var(--warning)" stroke-width="2"></circle></svg>`;
+      const infoBadge = `<svg width="16" height="16" fill="none" stroke="var(--ssl)" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01"></path><circle cx="12" cy="12" r="10" stroke="var(--ssl)" stroke-width="2"></circle></svg>`;
+
+      function renderMetrics(latest) {
+        const container = document.getElementById('live-metrics');
+        const diagPanel = document.getElementById('diagnosis-panel');
+        
+        if (!latest) {
+          container.innerHTML = '';
+          diagPanel.style.display = 'none';
+          return;
+        }
+
+        // Determine Statuses
+        const isUp = (latest.Reachability_Status || '').toUpperCase() === 'UP';
+        const reachClass = isUp ? 'text-success' : 'text-danger';
+        const reachIcon = isUp ? successBadge : dangerBadge;
+
+        const isHttpUp = (latest.HTTP_Status || '').toUpperCase() === 'UP';
+        const isHttpWarn = (latest.HTTP_Status || '').toUpperCase() === 'WARNING';
+        const httpClass = isHttpUp ? 'text-success' : (isHttpWarn ? 'text-warning' : 'text-danger');
+        const httpIcon = isHttpUp ? successBadge : (isHttpWarn ? warnBadge : dangerBadge);
+        const httpPillText = isHttpUp ? 'UP' : (isHttpWarn ? 'WARN' : 'DOWN');
+        const httpSubText = latest.HTTP_Status_Code || 'ERR';
+
+        const avgResp = parseFloat(latest.Avg_Response_Time_ms) || 0;
+        let perfClass = 'text-success';
+        let perfPill = 'Performance';
+        let respIcon = successBadge;
+        if (avgResp === 0) {
+          perfClass = 'text-danger';
+          perfPill = 'DOWN';
+          respIcon = dangerBadge;
+        } else if (avgResp >= 280) {
+          perfClass = 'text-danger';
+          perfPill = 'Slow';
+          respIcon = dangerBadge;
+        } else if (avgResp >= 120) {
+          perfClass = 'text-warning';
+          perfPill = 'Moderate';
+          respIcon = warnBadge;
+        }
+
+        const alertText = (latest.Alert || 'NORMAL').toUpperCase();
+        let alertClass = 'text-success';
+        let alertIcon = successBadge;
+        if (alertText === 'CRITICAL' || alertText === 'DOWN') {
+          alertClass = 'text-danger';
+          alertIcon = dangerBadge;
+        } else if (alertText === 'WARNING') {
+          alertClass = 'text-warning';
+          alertIcon = warnBadge;
+        } else if (alertText === 'SSL EXPIRING') {
+          alertClass = 'text-ssl';
+          alertIcon = infoBadge;
+        }
+
+        container.innerHTML = `
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <div class="metric-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="metric-badge-wrap">${reachIcon}</div>
+            </div>
+            <div class="metric-title">Reachability Status</div>
+            <div class="metric-value ${reachClass}">${latest.Reachability_Status || 'N/A'}</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <div class="metric-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="metric-badge-wrap">${httpIcon}</div>
+            </div>
+            <div class="metric-title">HTTP Status</div>
+            <div class="metric-value ${httpClass}">
+              ${httpPillText}
+              <span class="metric-subpill">${httpSubText}</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <div class="metric-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 0-10 10 10 10 0 0 0 13.29 9.5M12 6V12l4 2M22 12A10 10 0 0 0 12 2m0 20v-2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="1"/></svg>
+              </div>
+              <div class="metric-badge-wrap">${respIcon}</div>
+            </div>
+            <div class="metric-title">Avg Response</div>
+            <div class="metric-value">
+              ${avgResp}<span style="font-size:16px;color:var(--muted);font-weight:500;">ms</span>
+              <span class="metric-subpill">${perfPill}</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-card-header">
+              <div class="metric-icon-wrap">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="metric-badge-wrap">${alertIcon}</div>
+            </div>
+            <div class="metric-title">Alert Status</div>
+            <div class="metric-value ${alertClass}">${latest.Alert || 'NORMAL'}</div>
+          </div>
+        `;
+
+        // Render diagnosis
+        if (latest.Diagnosis) {
+          diagPanel.innerHTML = `
+            <div class="diagnosis-title">Diagnosis Report</div>
+            <div>${latest.Diagnosis}</div>
+          `;
+          diagPanel.style.display = 'block';
+        } else {
+          diagPanel.style.display = 'none';
+        }
       }
 
       function renderTable(data){
@@ -58,33 +265,84 @@
         thead.innerHTML = '';
         tbody.innerHTML = '';
         if(!data || data.length===0){
-          thead.innerHTML = '<tr><th>No data</th></tr>';
+          thead.innerHTML = '<tr><th>No data matching filter</th></tr>';
           return;
         }
-        // columns from first row
+
+        // Columns setup
         const cols = Object.keys(data[0]);
         const tr = document.createElement('tr');
-        cols.forEach(c=>{ const th=document.createElement('th'); th.textContent=c; tr.appendChild(th)});
+        cols.forEach(c => {
+          const th = document.createElement('th');
+          th.textContent = c.replace(/_/g, ' ');
+          tr.appendChild(th);
+        });
         thead.appendChild(tr);
-        data.forEach(row=>{
+
+        // Rows render
+        data.forEach(row => {
           const tr = document.createElement('tr');
-          cols.forEach(c=>{
+          cols.forEach(c => {
             const td = document.createElement('td');
-            td.textContent = row[c];
+            const val = row[c];
+            
+            // Format column data
+            if (c === 'Reachability_Status' || c === 'HTTP_Status' || c === 'Final_Status') {
+              const statusUpper = (val || '').toUpperCase();
+              if (statusUpper === 'UP') {
+                td.innerHTML = `<span class="tag-badge tag-badge-up">${val}</span>`;
+              } else if (statusUpper === 'DOWN' || statusUpper === 'DNS ISSUE') {
+                td.innerHTML = `<span class="tag-badge tag-badge-down">${val}</span>`;
+              } else {
+                td.innerHTML = `<span class="tag-badge tag-badge-warn">${val}</span>`;
+              }
+            }
+            else if (c === 'Alert') {
+              const alertUpper = (val || '').toUpperCase();
+              if (alertUpper === 'NORMAL') {
+                td.innerHTML = `<span class="tag-badge tag-badge-up">NORMAL</span>`;
+              } else if (alertUpper === 'WARNING' || alertUpper === 'SSL EXPIRING') {
+                td.innerHTML = `<span class="tag-badge tag-badge-warn">${val}</span>`;
+              } else {
+                td.innerHTML = `<span class="tag-badge tag-badge-down">${val}</span>`;
+              }
+            }
+            else if (c === 'Packet_Loss_%') {
+              const loss = parseFloat(val) || 0;
+              const strokeColor = loss > 0 ? 'var(--danger)' : 'var(--success)';
+              td.innerHTML = `
+                <div class="progress-ring-wrap">
+                  <svg width="32" height="32" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3"></circle>
+                    <circle cx="18" cy="18" r="15.915" fill="none" stroke="${strokeColor}" stroke-width="3.2" stroke-dasharray="${loss}, 100" stroke-dashoffset="0" stroke-linecap="round"></circle>
+                  </svg>
+                  <span class="progress-ring-text">${Math.round(loss)}%</span>
+                </div>
+              `;
+            }
+            else if (c.includes('Time_ms')) {
+              const msVal = parseFloat(val);
+              td.textContent = isNaN(msVal) ? val : `${msVal.toFixed(1)} ms`;
+            }
+            else if (c === 'SSL_Days_Left') {
+              const days = parseInt(val, 10);
+              if (isNaN(days) || days < 0) {
+                td.innerHTML = `<span class="text-danger" style="font-weight:700;">Expired/NA</span>`;
+              } else if (days < 10) {
+                td.innerHTML = `<span class="text-danger" style="font-weight:700;">${days} days</span>`;
+              } else if (days < 30) {
+                td.innerHTML = `<span class="text-warning" style="font-weight:600;">${days} days</span>`;
+              } else {
+                td.innerHTML = `<span class="text-ssl" style="font-weight:500;">${days} days</span>`;
+              }
+            }
+            else {
+              td.textContent = val;
+            }
             tr.appendChild(td);
           });
           tbody.appendChild(tr);
         });
-      }
-
-      function renderSummary(data){
-        const summary = document.getElementById('summary');
-        summary.innerHTML = '';
-        if(!data || data.length===0) return;
-        const latest = data[data.length-1];
-        const p = document.createElement('p');
-        p.textContent = humanRow(latest);
-        summary.appendChild(p);
       }
 
       function loadCsvAndRender(){
@@ -96,8 +354,13 @@
             const raw = results.data;
             const filter = document.getElementById('filter-site').value.trim().toLowerCase();
             const filtered = filter ? raw.filter(r=> (r.Website||'').toLowerCase().includes(filter)) : raw;
+            
             renderTable(filtered);
-            renderSummary(filtered);
+            if (filtered.length > 0) {
+              renderMetrics(filtered[filtered.length - 1]);
+            } else {
+              renderMetrics(null);
+            }
           },
           error: function(err){
             document.getElementById('thead').innerHTML = '<tr><th>Error loading CSV</th></tr>';
@@ -109,61 +372,101 @@
       document.getElementById('refresh').addEventListener('click', loadCsvAndRender);
       document.getElementById('filter-site').addEventListener('keyup', function(e){ if(e.key==='Enter') loadCsvAndRender(); });
 
-      // Backend integration: persist backend endpoint in localStorage and allow POSTing a run request
+      // Backend integration: persist backend credentials in localStorage and post check runs
       const backendInput = document.getElementById('backend-url');
-      const saveBtn = document.getElementById('save-backend');
+      const tokenInput = document.getElementById('api-token');
+      const saveBtn = document.getElementById('save-credentials');
       const runBtn = document.getElementById('run-check');
+      const alertBox = document.getElementById('info-alert');
       const runStatus = document.getElementById('run-status');
 
-  const STORAGE_KEY = 'monitor_backend_url';
-  const TOKEN_KEY = 'monitor_api_token';
-      function loadBackendUrl(){
-        const val = localStorage.getItem(STORAGE_KEY) || '';
-        backendInput.value = val;
-        return val;
+      const STORAGE_KEY = 'monitor_backend_url';
+      const TOKEN_KEY = 'monitor_api_token';
+
+      function loadCredentials(){
+        backendInput.value = localStorage.getItem(STORAGE_KEY) || '';
+        tokenInput.value = localStorage.getItem(TOKEN_KEY) || '';
       }
-      function saveBackendUrl(v){ localStorage.setItem(STORAGE_KEY, v); backendInput.value = v; }
 
-  saveBtn.addEventListener('click', function(){ saveBackendUrl(backendInput.value.trim()); runStatus.textContent = 'Saved'; setTimeout(()=>runStatus.textContent='','2000'); });
-
-  // token saving
-  const tokenInput = document.getElementById('api-token');
-  const saveTokenBtn = document.getElementById('save-token');
-  function loadToken(){ const v = localStorage.getItem(TOKEN_KEY) || ''; tokenInput.value = v; return v; }
-  function saveToken(v){ localStorage.setItem(TOKEN_KEY, v); tokenInput.value = v; }
-  saveTokenBtn.addEventListener('click', function(){ saveToken(tokenInput.value.trim()); runStatus.textContent='Token saved'; setTimeout(()=>runStatus.textContent='','2000'); });
+      saveBtn.addEventListener('click', function(){
+        localStorage.setItem(STORAGE_KEY, backendInput.value.trim());
+        localStorage.setItem(TOKEN_KEY, tokenInput.value.trim());
+        
+        alertBox.style.border = '1px solid var(--success)';
+        alertBox.style.background = 'rgba(16, 185, 129, 0.05)';
+        alertBox.style.color = 'var(--success)';
+        runStatus.textContent = 'API settings saved successfully!';
+        alertBox.style.display = 'flex';
+        setTimeout(() => { alertBox.style.display = 'none'; }, 3000);
+      });
 
       runBtn.addEventListener('click', async function(){
-        const backend = backendInput.value.trim() || loadBackendUrl();
-        if(!backend){ runStatus.textContent = 'Set backend URL first'; return; }
-        const site = (document.getElementById('filter-site').value || '').trim();
-        if(!site){ runStatus.textContent = 'Enter a website to run'; return; }
-        runStatus.textContent = 'Sending...';
-        try{
-          const headers = {'Content-Type':'application/json'};
-          const token = localStorage.getItem(TOKEN_KEY) || '';
-          if(token) headers['X-API-Key'] = token;
+        const backend = backendInput.value.trim() || localStorage.getItem(STORAGE_KEY);
+        if(!backend){
+          alertBox.style.border = '1px solid var(--danger)';
+          alertBox.style.background = 'rgba(244, 63, 94, 0.05)';
+          alertBox.style.color = 'var(--danger)';
+          runStatus.textContent = 'Configuration Error: Set your Backend URL first.';
+          alertBox.style.display = 'flex';
+          return;
+        }
+
+        const site = document.getElementById('filter-site').value.trim();
+        if(!site){
+          alertBox.style.border = '1px solid var(--warning)';
+          alertBox.style.background = 'rgba(251, 146, 60, 0.05)';
+          alertBox.style.color = 'var(--warning)';
+          runStatus.textContent = 'Please enter a website name to trigger monitoring.';
+          alertBox.style.display = 'flex';
+          return;
+        }
+
+        alertBox.style.border = '1px solid var(--accent)';
+        alertBox.style.background = 'rgba(59, 130, 246, 0.05)';
+        alertBox.style.color = 'var(--accent)';
+        runStatus.textContent = `Monitoring request submitted for ${site}...`;
+        alertBox.style.display = 'flex';
+
+        try {
+          const headers = {'Content-Type': 'application/json'};
+          const token = tokenInput.value.trim() || localStorage.getItem(TOKEN_KEY);
+          if (token) headers['X-API-Key'] = token;
+
           const res = await fetch(backend, {
             method: 'POST',
             headers,
             body: JSON.stringify({ site })
           });
-          if(!res.ok){
-            const t = await res.text();
-            runStatus.textContent = 'Error: ' + res.status + ' ' + t;
+
+          if (!res.ok) {
+            const errText = await res.text();
+            alertBox.style.border = '1px solid var(--danger)';
+            alertBox.style.background = 'rgba(244, 63, 94, 0.05)';
+            alertBox.style.color = 'var(--danger)';
+            runStatus.textContent = `Error ${res.status}: ${errText}`;
             return;
           }
-          runStatus.textContent = 'Requested. Refreshing in 3s...';
-          setTimeout(()=>{ loadCsvAndRender(); runStatus.textContent='Done'; }, 3000);
-        }catch(err){
-          runStatus.textContent = 'Request failed: ' + err.message;
+
+          alertBox.style.border = '1px solid var(--success)';
+          alertBox.style.background = 'rgba(16, 185, 129, 0.05)';
+          alertBox.style.color = 'var(--success)';
+          runStatus.textContent = 'Monitoring check completed successfully! Fetching current metrics...';
+          
+          setTimeout(() => {
+            loadCsvAndRender();
+            alertBox.style.display = 'none';
+          }, 3000);
+
+        } catch (err) {
+          alertBox.style.border = '1px solid var(--danger)';
+          alertBox.style.background = 'rgba(244, 63, 94, 0.05)';
+          alertBox.style.color = 'var(--danger)';
+          runStatus.textContent = `Network Request Failed: ${err.message}`;
         }
       });
 
-      // prefill backend input from localStorage
-      loadBackendUrl();
-
-      // initial load
+      // Initialize
+      loadCredentials();
       loadCsvAndRender();
     </script>
   </body>

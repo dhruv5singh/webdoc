@@ -5,7 +5,7 @@ import subprocess
 import requests
 import csv
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import socket
 import ssl
@@ -40,17 +40,46 @@ def load_sites(target_site):
 
 
 def run_monitor(target_site=None, fast_mode=False):
+    # Ensure CSV headers are aligned and updated
+    if os.path.isfile("report.csv"):
+        try:
+            with open("report.csv", "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            if lines:
+                header = lines[0].strip().split(",")
+                needs_update = False
+                if "Ping_Status" in header:
+                    header = ["Reachability_Status" if h == "Ping_Status" else h for h in header]
+                    needs_update = True
+                if "Diagnosis" not in header:
+                    header.append("Diagnosis")
+                    needs_update = True
+                
+                if needs_update:
+                    lines[0] = ",".join(header) + "\n"
+                    # For historical rows, pad them to match the new headers
+                    expected_len = len(header)
+                    for i in range(1, len(lines)):
+                        row = lines[i].strip().split(",")
+                        if len(row) < expected_len:
+                            row.extend([""] * (expected_len - len(row)))
+                            lines[i] = ",".join(row) + "\n"
+                    
+                    with open("report.csv", "w", encoding="utf-8", newline="") as f:
+                        f.writelines(lines)
+        except Exception as e:
+            print(f"Error repairing report.csv headers: {e}")
+
     file_exists = os.path.isfile("report.csv")
     sites = load_sites(target_site)
 
     with open("report.csv", "a", newline="", encoding="utf-8") as report:
         writer = csv.writer(report)
-
         if not file_exists:
             writer.writerow([
                 "Timestamp",
                 "Website",
-                "Ping_Status",
+                "Reachability_Status",
                 "Avg_Response_Time_ms",
                 "Packet_Loss_%",
                 "DNS_Time_ms",
@@ -61,15 +90,15 @@ def run_monitor(target_site=None, fast_mode=False):
                 "Final_Status",
                 "Category",
                 "Alert",
+                "Diagnosis",
             ])
 
         for row in sites:
             site_raw = row.get("site")
             if not site_raw:
                 continue
-            # normalize input: accept full URLs (with http/https and paths) or bare hostnames
+            # normalize input: accept full URLs or bare hostnames
             s = site_raw.strip()
-            # If user provided a full URL (includes scheme), parse it
             if s.startswith('http://') or s.startswith('https://'):
                 parsed = urlparse(s)
                 hostname = parsed.hostname
@@ -78,13 +107,11 @@ def run_monitor(target_site=None, fast_mode=False):
                     path += '?' + parsed.query
                 http_urls = [s.rstrip('/')]
             else:
-                # could be 'example.com' or 'example.com/path'
                 parsed = urlparse('//' + s)
                 hostname = parsed.hostname or s
                 path = parsed.path or ''
                 if parsed.query:
                     path += '?' + parsed.query
-                # try HTTPS first, then HTTP
                 http_urls = [f'https://{hostname}{path}', f'http://{hostname}{path}']
 
             site = hostname
@@ -100,79 +127,45 @@ def run_monitor(target_site=None, fast_mode=False):
                 ip_address = "DNS FAILED"
                 dns_time = 0
 
-            # PING
-            ping_count = 1 if fast_mode else 3
-            ping_wait = 1 if fast_mode else 2
-
-            try:
-                result = subprocess.run(
-                    ["ping", "-c", str(ping_count), "-W", str(ping_wait), site],
-                    capture_output=True,
-                    text=True
-                )
-
-                output = result.stdout
-
-                ping_status = "UP" if result.returncode == 0 else "DOWN"
-
-            except Exception:
-                output = ""
-                ping_status = "DOWN"
-
-            # RESPONSE TIME
-            time_match = re.findall(r"time=(\d+\.?\d*)", output)
-
-            avg_time = (
-                sum(map(float, time_match)) / len(time_match)
-            ) if time_match else 0
-
-            # PACKET LOSS
-            loss_match = re.search(r"(\d+)% packet loss", output)
-
-            if loss_match:
-                packet_loss = float(loss_match.group(1))
-            else:
-                packet_loss = 100 if ping_status == "DOWN" else 0
-
-
-
-            # HTTP - use a session, follow redirects, record history; try HTTPS then HTTP
+            # ---------------- HTTP REACHABILITY & LATENCY ----------------
+            reachability_status = "DOWN"
+            avg_time = 0
+            packet_loss = 100
             status_code = 0
             http_status = "DOWN"
             load_time = 0
-            final_url = ""
+            diagnosis = ""
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.9",
             }
-            session = requests.Session()
-            session.headers.update(headers)
             http_timeout = 3 if fast_mode else 10
-            # Try the candidate HTTP URLs (either the provided URL or https/http variants)
-            for url_try in http_urls:
-                try:
-                    start = time.time()
-                    resp = session.get(url_try, timeout=http_timeout, allow_redirects=True)
-                    end = time.time()
-                    load_time = (end - start) * 1000
-                    status_code = resp.status_code
-                    final_url = resp.url
-                    # log redirect chain for debugging
-                    if resp.history:
-                        chain = " -> ".join(h.headers.get('Location', str(h.status_code)) for h in resp.history)
-                        print(f"HTTP redirect chain for {site}: {chain} -> {final_url} (final {status_code})")
-                    else:
-                        print(f"HTTP final URL for {site}: {final_url} (status {status_code})")
-                    # treat 2xx and 3xx as UP
-                    if 200 <= status_code < 400:
-                        http_status = "UP"
-                    else:
-                        http_status = "WARNING"
-                    break
-                except Exception as e:
-                    print(f"HTTP request for {url_try} failed: {e}")
-                    continue
+
+            # Run HTTP checks only if DNS succeeded
+            if ip_address != "DNS FAILED":
+                for url_try in http_urls:
+                    try:
+                        start = time.time()
+                        response = requests.get(url_try, headers=headers, timeout=http_timeout, allow_redirects=True)
+                        end = time.time()
+                        avg_time = (end - start) * 1000
+                        load_time = avg_time
+                        status_code = response.status_code
+                        
+                        # Reachability is UP if we get a response
+                        reachability_status = "UP"
+                        packet_loss = 0
+                        
+                        if 200 <= status_code < 400:
+                            http_status = "UP"
+                        else:
+                            http_status = "WARNING"
+                        
+                        break
+                    except Exception as e:
+                        diagnosis = f"HTTP request failed: {e}"
+                        continue
 
             # SSL
             ssl_timeout = 3 if fast_mode else 5
@@ -183,42 +176,45 @@ def run_monitor(target_site=None, fast_mode=False):
                     s.connect((site, 443))
                     cert = s.getpeercert()
                     expiry_date = datetime.strptime(cert['notAfter'], '%b %d %H:%M:%S %Y %Z')
-                    ssl_days_left = (expiry_date - datetime.utcnow()).days
+                    ssl_days_left = (expiry_date.replace(tzinfo=timezone.utc) - datetime.now(timezone.utc)).days
             except Exception:
                 ssl_days_left = -1
 
-            # FINAL STATUS
-            if http_status == "UP":
-                final_status = "UP"
-            elif ping_status == "UP":
-                final_status = "NETWORK ISSUE"
-            else:
+            # FINAL STATUS & DIAGNOSIS
+            if ip_address == "DNS FAILED":
+                final_status = "DNS ISSUE"
+                diagnosis = "DNS resolution failed."
+                alert = "CRITICAL"
+            elif reachability_status == "DOWN":
                 final_status = "DOWN"
+                diagnosis = "Website unreachable via HTTP."
+                alert = "CRITICAL"
+            else:
+                final_status = "UP"
+                if ssl_days_left != -1 and ssl_days_left < 7:
+                    alert = "SSL EXPIRING"
+                    diagnosis = "SSL certificate nearing expiry."
+                elif avg_time > 300:
+                    alert = "WARNING"
+                    diagnosis = "Website reachable but high latency detected."
+                else:
+                    alert = "NORMAL"
+                    diagnosis = "Application reachable and healthy."
 
             # CATEGORY
-            if avg_time < 100:
+            if avg_time == 0:
+                category = "N/A"
+            elif avg_time < 100:
                 category = "Fast"
             elif avg_time < 250:
                 category = "Moderate"
             else:
                 category = "Slow"
 
-            # ALERT
-            if final_status == "DOWN":
-                alert = "CRITICAL"
-            elif packet_loss > 30:
-                alert = "CRITICAL"
-            elif avg_time > 300:
-                alert = "WARNING"
-            elif ssl_days_left != -1 and ssl_days_left < 7:
-                alert = "SSL EXPIRING"
-            else:
-                alert = "NORMAL"
-
             writer.writerow([
                 timestamp,
                 site,
-                ping_status,
+                reachability_status,
                 round(avg_time, 2),
                 round(packet_loss, 2),
                 round(dns_time, 2),
@@ -229,6 +225,7 @@ def run_monitor(target_site=None, fast_mode=False):
                 final_status,
                 category,
                 alert,
+                diagnosis,
             ])
 
 
