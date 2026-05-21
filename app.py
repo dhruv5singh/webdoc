@@ -1,9 +1,5 @@
 import streamlit as st
 import pandas as pd
-<<<<<<< HEAD
- 
-=======
->>>>>>> master
 import requests
 import socket
 import ssl
@@ -532,55 +528,6 @@ def monitor_website(site_raw, fast_mode=True):
         ip_address = "DNS FAILED"
         dns_time = 0
 
-<<<<<<< HEAD
-    # ---------------- PING ----------------
-
-    ping_count = 1 if fast_mode else 3
-    ping_wait = 1 if fast_mode else 2
-
-    try:
-
-        result = subprocess.run(
-            ["ping", "-c", str(ping_count), "-W", str(ping_wait), site],
-            capture_output=True,
-            text=True
-        )
-
-        output = result.stdout
-
-        ping_status = "UP" if result.returncode == 0 else "DOWN"
-
-    except Exception:
-        output = ""
-        ping_status = "DOWN"
-
-    # RESPONSE TIME
-
-    time_match = re.findall(
-        r"time=(\d+\.?\d*)",
-        output
-    )
-
-    avg_time = (
-        sum(map(float, time_match)) / len(time_match)
-    ) if time_match else 0
-
-    # PACKET LOSS
-
-    loss_match = re.search(
-        r"(\d+)% packet loss",
-        output
-    )
-
-    if loss_match:
-        packet_loss = float(loss_match.group(1))
-    else:
-        packet_loss = 100 if ping_status == "DOWN" else 0
-
-    # ---------------- HTTP CHECK ----------------
-
-=======
->>>>>>> master
     # ---------------- HTTP REACHABILITY & LATENCY ----------------
     reachability_status = "DOWN"
     avg_time = 0
@@ -589,33 +536,6 @@ def monitor_website(site_raw, fast_mode=True):
     http_status = "DOWN"
     load_time = 0
     diagnosis = ""
-<<<<<<< HEAD
-    headers = {"User-Agent": "Mozilla/5.0"}
-    http_timeout = 3 if fast_mode else 10
-    response = None
-    for url_try in http_urls:
-        try:
-            start = time.time()
-            response = requests.get(url_try, headers=headers, timeout=http_timeout, allow_redirects=True)
-            end = time.time()
-            avg_time = (end - start) * 1000
-            status_code = response.status_code
-            if 200 <= status_code < 400:
-                reachability_status = "UP"
-                http_status = "UP"
-                packet_loss = 0
-                diagnosis = "Application reachable and healthy."
-            else:
-                reachability_status = "UP"
-                http_status = "WARNING"
-                packet_loss = 0
-                diagnosis = "Website reachable but HTTP status is not OK."
-            website_display = response.url
-            break
-        except Exception as e:
-            diagnosis = f"HTTP request failed: {e}"
-            continue
-=======
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -648,7 +568,6 @@ def monitor_website(site_raw, fast_mode=True):
             except Exception as e:
                 diagnosis = f"HTTP request failed: {e}"
                 continue
->>>>>>> master
 
     if reachability_status == "DOWN":
         diagnosis = "Website unreachable via HTTP."
