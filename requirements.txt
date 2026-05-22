@@ -4,3 +4,4 @@ requests
 streamlit
 pandas
 flask-cors
+plotly
