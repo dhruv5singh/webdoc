@@ -655,19 +655,21 @@ if st.session_state.get('page') == 'docs':
     """, unsafe_allow_html=True)
 
     def doc_section(icon, title, color, body_html):
-        st.markdown(f"""
-        <div style="background:linear-gradient(145deg,#111827,#0f172a); border:1px solid #1f2d45;
-                    border-left:4px solid {color}; border-radius:16px;
-                    padding:1.5rem 1.6rem; margin-bottom:1.2rem;
-                    box-shadow:0 4px 20px rgba(0,0,0,0.3);">
-            <div style="font-size:16px; font-weight:800; color:{color}; margin-bottom:0.8rem;">
-                {icon} {title}
-            </div>
-            <div style="color:#94a3b8; font-size:13px; line-height:1.9;">
-                {body_html}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        import textwrap
+        clean_body = textwrap.dedent(body_html).strip()
+        html_content = (
+            f"<div style='background:linear-gradient(145deg,#111827,#0f172a); border:1px solid #1f2d45; "
+            f"border-left:4px solid {color}; border-radius:16px; padding:1.5rem 1.6rem; margin-bottom:1.2rem; "
+            f"box-shadow:0 4px 20px rgba(0,0,0,0.3);'>"
+            f"<div style='font-size:16px; font-weight:800; color:{color}; margin-bottom:0.8rem;'>"
+            f"{icon} {title}"
+            f"</div>"
+            f"<div style='color:#94a3b8; font-size:13px; line-height:1.9;'>"
+            f"{clean_body}"
+            f"</div>"
+            f"</div>"
+        )
+        st.markdown(html_content, unsafe_allow_html=True)
 
     doc_section("🌐", "What is WebDoc?", "#7c3aed", """
         WebDoc is an <span style='color:#e2e8f0;font-weight:700;'>AI-powered network monitoring tool</span> that lets you
@@ -726,10 +728,9 @@ if st.session_state.get('page') == 'docs':
     """)
 
     doc_section("🔒", "Privacy and Data Storage", "#64748b", """
-        All data is stored <span style='color:#e2e8f0;font-weight:700;'>locally on your machine</span> in a SQLite file
-        (<span style='background:#1f2d45;padding:1px 6px;border-radius:4px;color:#a78bfa;'>user_data.db</span>).
-        No data is sent to external servers. Your email is used only as a local identifier to
-        separate scan histories between different users on the same machine.
+        All monitoring data is stored <span style='color:#e2e8f0;font-weight:700;'>securely and privately under your profile</span>.
+        No data is shared with external third parties. Your email is used only as a local identifier to
+        separate scan histories between different users.
     """)
 
     st.stop()
@@ -805,6 +806,8 @@ if st.session_state.get('page') == 'help':
         </div>
         """, unsafe_allow_html=True)
 
+        st.markdown("<div style='height:0.8rem;'></div>", unsafe_allow_html=True)
+
         with st.form("form_bug_report", clear_on_submit=True):
             bug_title = st.text_input("Bug Title", placeholder="Short description of the issue", key="bug_title")
             bug_desc  = st.text_area("Description", placeholder="What went wrong? Include steps to reproduce if possible.", height=90, key="bug_desc")
@@ -835,6 +838,8 @@ if st.session_state.get('page') == 'help':
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+        st.markdown("<div style='height:0.8rem;'></div>", unsafe_allow_html=True)
 
         with st.form("form_feature_request", clear_on_submit=True):
             fr_title = st.text_input("Feature Title", placeholder="One-line summary of your idea", key="fr_title")
