@@ -11,12 +11,13 @@ http {
     server {
         listen ${PORT};
 
-        # Secure Admin Panel - MUST be defined BEFORE the catch-all location /
-        # The trailing slash on both location and proxy_pass is critical:
-        # it strips the prefix so Streamlit receives paths correctly,
-        # and ensures sub-paths like /_stcore/stream are matched here, not at location /
+        # Admin Panel — MUST be defined BEFORE the catch-all location /
+        # location with trailing slash matches all sub-paths (/_stcore/stream, /static/... etc.)
+        # proxy_pass WITHOUT trailing slash = Nginx passes the FULL path to Streamlit.
+        # Streamlit needs the full /admin-panel-control/... path because it's configured
+        # with --server.baseUrlPath /admin-panel-control and only handles that prefix.
         location ${ADMIN_SLUG}/ {
-            proxy_pass http://127.0.0.1:8502/;
+            proxy_pass http://127.0.0.1:8502;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
@@ -27,14 +28,14 @@ http {
             proxy_read_timeout 86400;
         }
 
-        # Redirect bare slug (no trailing slash) to slug/ so browsers get the right base path
+        # Redirect bare slug (no trailing slash) → slug/ so browser base URL is correct
         location = ${ADMIN_SLUG} {
             return 301 ${ADMIN_SLUG}/;
         }
 
-        # Main User Streamlit Application (catch-all)
+        # Main User App — catch-all, runs on port 8501 without baseUrlPath
         location / {
-            proxy_pass http://127.0.0.1:8501/;
+            proxy_pass http://127.0.0.1:8501;
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
