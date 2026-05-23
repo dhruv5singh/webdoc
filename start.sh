@@ -27,10 +27,10 @@ print('Dynamic Nginx configuration written successfully!')
 "
 
 echo "Launching main Streamlit app on internal port 8501..."
-streamlit run app.py --server.port 8501 --server.address 127.0.0.1 --server.headless true &
+streamlit run app.py --server.port 8501 --server.address 127.0.0.1 --server.headless true --server.enableCORS false --server.enableXsrfProtection false &
 
 echo "Launching admin Streamlit app on internal port 8502 with baseUrlPath $ADMIN_SLUG..."
-streamlit run admin_app.py --server.port 8502 --server.address 127.0.0.1 --server.baseUrlPath "$ADMIN_SLUG" --server.headless true &
+streamlit run admin_app.py --server.port 8502 --server.address 127.0.0.1 --server.baseUrlPath "$ADMIN_SLUG" --server.headless true --server.enableCORS false --server.enableXsrfProtection false &
 
 echo "Starting Nginx frontend proxy..."
 nginx -g "daemon off;"

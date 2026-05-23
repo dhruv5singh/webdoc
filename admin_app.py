@@ -4,6 +4,7 @@ import sqlite3
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import os
 
 from feedback_db import (
     get_bug_reports,
@@ -24,6 +25,67 @@ st.set_page_config(
     page_icon="🛠️",
     layout="wide"
 )
+
+# ================================================================
+# ADMIN AUTHENTICATION GATE
+# ================================================================
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin1234")  # Set ADMIN_PASSWORD on Render
+
+if 'admin_authenticated' not in st.session_state:
+    st.session_state['admin_authenticated'] = False
+
+if not st.session_state['admin_authenticated']:
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    html, body, .stApp { font-family: 'Inter', sans-serif !important; background-color: #0b0f1a !important; }
+    #MainMenu, footer, header { visibility: hidden; }
+    [data-testid="stHeaderActionElements"] { display: none !important; }
+    .stApp { display: flex; align-items: center; justify-content: center; }
+    .stTextInput > div > div > input {
+        background: #111827 !important; border: 1px solid #1f2d45 !important;
+        color: #e2e8f0 !important; border-radius: 10px !important;
+        font-size: 14px !important; padding: 0.6rem 1rem !important;
+    }
+    .stTextInput > div > div > input:focus { border-color: #7c3aed !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.2) !important; }
+    .stTextInput > label { color: #94a3b8 !important; font-size: 13px !important; }
+    .stButton > button {
+        background: linear-gradient(135deg, #7c3aed, #6d28d9) !important;
+        color: white !important; border: none !important; border-radius: 10px !important;
+        font-weight: 700 !important; padding: 0.6rem 1.5rem !important;
+        width: 100% !important; font-size: 15px !important;
+        box-shadow: 0 4px 20px rgba(124,58,237,0.4) !important;
+        transition: all 0.2s ease !important;
+    }
+    .stButton > button:hover { box-shadow: 0 6px 28px rgba(124,58,237,0.65) !important; transform: translateY(-1px) !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    _, center_col, _ = st.columns([1, 1.2, 1])
+    with center_col:
+        st.markdown("""
+        <div style="text-align:center; padding: 3rem 2rem 2rem;">
+            <div style="font-size:3.5rem; margin-bottom:0.5rem;">🛠️</div>
+            <h1 style="color:#ffffff; font-weight:800; font-size:1.8rem; margin:0 0 6px;">WebDoc Admin</h1>
+            <p style="color:#4b5563; font-size:13px; margin:0 0 2rem; text-transform:uppercase; letter-spacing:1px;">Restricted Access — Control Panel</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        pwd_input = st.text_input("Admin Password", type="password", placeholder="Enter admin password...", key="admin_pwd_input")
+
+        if st.button("🔐 Sign In to Admin Panel", use_container_width=True):
+            if pwd_input == ADMIN_PASSWORD:
+                st.session_state['admin_authenticated'] = True
+                st.rerun()
+            else:
+                st.error("❌ Incorrect password. Access denied.")
+
+        st.markdown("""
+        <div style="text-align:center; margin-top:2rem;">
+            <p style="color:#2d3a55; font-size:11px;">🔒 This panel is restricted to authorised administrators only.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    st.stop()
 
 # ================================================================
 # GLOBAL CSS (Matching WebDoc UI Aesthetics)
@@ -243,6 +305,11 @@ st.sidebar.markdown(
 )
 nav_btn("Bug Reports", "🐛", "bugs")
 nav_btn("Feature Requests", "💡", "features")
+
+st.sidebar.markdown('<hr style="border-color:#1f2d45; margin:1.2rem 0 0.8rem;">', unsafe_allow_html=True)
+if st.sidebar.button("🚪  Sign Out", key="admin_logout", use_container_width=True):
+    st.session_state['admin_authenticated'] = False
+    st.rerun()
 
 
 # ================================================================

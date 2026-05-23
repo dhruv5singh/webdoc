@@ -11,7 +11,28 @@ http {
     server {
         listen ${PORT};
 
-        # Main User Streamlit Application
+        # Secure Admin Panel - MUST be defined BEFORE the catch-all location /
+        # The trailing slash on both location and proxy_pass is critical:
+        # it strips the prefix so Streamlit receives paths correctly,
+        # and ensures sub-paths like /_stcore/stream are matched here, not at location /
+        location ${ADMIN_SLUG}/ {
+            proxy_pass http://127.0.0.1:8502/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 86400;
+        }
+
+        # Redirect bare slug (no trailing slash) to slug/ so browsers get the right base path
+        location = ${ADMIN_SLUG} {
+            return 301 ${ADMIN_SLUG}/;
+        }
+
+        # Main User Streamlit Application (catch-all)
         location / {
             proxy_pass http://127.0.0.1:8501/;
             proxy_http_version 1.1;
@@ -21,18 +42,7 @@ http {
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-        }
-
-        # Secure Admin Panel Streamlit Application
-        location ${ADMIN_SLUG} {
-            proxy_pass http://127.0.0.1:8502;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 86400;
         }
     }
 }
