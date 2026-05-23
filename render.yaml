@@ -5,10 +5,14 @@ services:
     dockerfilePath: Dockerfile
     plan: free
     autoDeploy: true
-    ports:
-      - 8501
     healthCheckPath: /
-    startCommand: "bash start.sh"
     envVars:
+      - key: PORT
+        value: "10000"
+      - key: ADMIN_SLUG
+        value: "/admin-panel-control"
+      - key: ADMIN_PASSWORD
+        generateValue: false
+        value: "changeme123"
       - key: STREAMLIT_SERVER_HEADLESS
         value: "true"
